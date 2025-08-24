@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-history"></i> Historial de Reconocimientos</h3>
+            </div>
+            <div class="card-body">
+                {% if logs %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Fecha/Hora</th>
+                                    <th>Persona</th>
+                                    <th>Confianza</th>
+                                    <th>Imagen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                    <tr>
+                                        <td>{{ log.recognition_time|date:"d/m/Y H:i:s" }}</td>
+                                        <td>
+                                            {% if log.person %}
+                                                <i class="fas fa-user-check text-success"></i>
+                                                {{ log.person.name }}
+                                            {% else %}
+                                                <i class="fas fa-user-times text-warning"></i>
+                                                Desconocido
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge {% if log.confidence > 0.8 %}bg-success{% elif log.confidence > 0.6 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                {{ log.confidence|floatformat:2 }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if log.image %}
+                                                <img src="{{ log.image.url }}" width="50" height="40" 
+                                                     class="rounded" style="object-fit: cover;" alt="Reconocimiento">
+                                            {% else %}
+                                                <span class="text-muted">Sin imagen</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <h4 class="text-muted">No hay reconocimientos registrados</h4>
+                        <p>Los reconocimientos aparecerán aquí cuando se realicen</p>
+                        <a href="{% url 'recognize_face' %}" class="btn btn-success">
+                            <i class="fas fa-eye"></i> Realizar Reconocimiento
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

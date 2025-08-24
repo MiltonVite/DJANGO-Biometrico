@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Persona - Sistema de Reconocimiento Facial</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .navbar {
+            background: rgba(255,255,255,0.95) !important;
+            backdrop-filter: blur(10px);
+        }
+        #video, #canvas {
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .capture-container {
+            position: relative;
+            display: inline-block;
+        }
+        .camera-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 2px solid #007bff;
+            border-radius: 50%;
+            width: 200px;
+            height: 200px;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.7; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .btn-capture {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-capture:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,123,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-user-check"></i> Reconocimiento Facial
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="/">Inicio</a>
+                <a class="nav-link active" href="/register/">Registrar</a>
+                <a class="nav-link" href="/recognize/">Reconocer</a>
+                <a class="nav-link" href="/persons/">Personas</a>
+                <a class="nav-link" href="/history/">Historial</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Mensajes de Django -->
+        <div id="messages"></div>
+
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">
+                            <i class="fas fa-user-plus"></i> Registrar Nueva Persona
+                        </h3>
+                        <small>Completa los datos y captura una foto para registrar a la persona</small>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post" id="registerForm">
+                            {% csrf_token %}
+                            
+                            <div class="row">
+                                <!-- Formulario de datos -->
+                                <div class="col-md-5">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-user-edit text-primary"></i> Información Personal
+                                    </h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="name" class="form-label">
+                                            <i class="fas fa-signature"></i> Nombre completo *
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control form-control-lg" 
+                                               id="name" 
+                                               name="name" 
+                                               placeholder="Ingresa el nombre completo"
+                                               required>
+                                        <div class="form-text">Este nombre se mostrará al reconocer el rostro</div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">
+                                            <i class="fas fa-envelope"></i> Email (opcional)
+                                        </label>
+                                        <input type="email" 
+                                               class="form-control form-control-lg" 
+                                               id="email" 
+                                               name="email"
+                                               placeholder="correo@ejemplo.com">
+                                        <div class="form-text">Para contacto o identificación adicional</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">
+                                            <i class="fas fa-info-circle text-info"></i> Instrucciones
+                                        </label>
+                                        <div class="alert alert-info">
+                                            <small>
+                                                <strong>Para una mejor captura:</strong><br>
+                                                • Asegúrate de tener buena iluminación<br>
+                                                • Mira directamente a la cámara<br>
+                                                • Mantén el rostro centrado en el círculo<br>
+                                                • Evita usar gafas de sol o sombreros
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Captura de cámara -->
+                                <div class="col-md-7">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-camera text-success"></i> Captura de Rostro
+                                    </h5>
+                                    
+                                    <div class="text-center">
+                                        <div class="capture-container mb-3">
+                                            <video id="video" 
+                                                   width="350" 
+                                                   height="280" 
+                                                   autoplay 
+                                                   muted
+                                                   class="border">
+                                            </video>
+                                            <canvas id="canvas" 
+                                                    width="350" 
+                                                    height="280" 
+                                                    style="display:none;"
+                                                    class="border">
+                                            </canvas>
+                                            <div class="camera-overlay" id="cameraOverlay"></div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <button type="button" 
+                                                    id="captureBtn" 
+                                                    class="btn btn-primary btn-lg btn-capture me-2">
+                                                <i class="fas fa-camera"></i> Capturar Foto
+                                            </button>
+                                            <button type="button" 
+                                                    id="retakeBtn" 
+                                                    class="btn btn-warning btn-lg me-2" 
+                                                    style="display:none;">
+                                                <i class="fas fa-redo"></i> Tomar Otra
+                                            </button>
+                                        </div>
+                                        
+                                        <div id="cameraStatus" class="alert alert-info">
+                                            <i class="fas fa-video"></i> Cámara inicializando...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Campo oculto para los datos de la imagen -->
+                            <input type="hidden" id="imageData" name="image_data">
+                            
+                            <!-- Botones de acción -->
+                            <div class="text-center mt-4 pt-3 border-top">
+                                <button type="submit" 
+                                        class="btn btn-success btn-lg me-3" 
+                                        id="submitBtn" 
+                                        disabled>
+                                    <i class="fas fa-save"></i> Registrar Persona
+                                </button>
+                                <a href="/" class="btn btn-secondary btn-lg">
+                                    <i class="fas fa-arrow-left"></i> Cancelar
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Referencias a elementos del DOM
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let captureBtn = document.getElementById('captureBtn');
+        let retakeBtn = document.getElementById('retakeBtn');
+        let submitBtn = document.getElementById('submitBtn');
+        let imageData = document.getElementById('imageData');
+        let cameraStatus = document.getElementById('cameraStatus');
+        let cameraOverlay = document.getElementById('cameraOverlay');
+
+        // Variable para el stream de video
+        let videoStream = null;
+
+        // Inicializar cámara al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCamera();
+        });
+
+        // Función para inicializar la cámara
+        async function initializeCamera() {
+            try {
+                cameraStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Accediendo a la cámara...';
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 640, 
+                        height: 480,
+                        facingMode: 'user'
+                    } 
+                });
+                
+                video.srcObject = stream;
+                videoStream = stream;
+                
+                cameraStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> Cámara lista. Posiciona tu rostro en el círculo.';
+                cameraStatus.className = 'alert alert-success';
+                
+            } catch (err) {
+                console.error('Error al acceder a la cámara:', err);
+                cameraStatus.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Error de cámara:</strong> ${err.message || 'No se pudo acceder a la cámara'}
+                    <br><small>Asegúrate de permitir el acceso a la cámara en tu navegador.</small>
+                `;
+                cameraStatus.className = 'alert alert-danger';
+                captureBtn.disabled = true;
+            }
+        }
+
+        // Capturar foto
+        captureBtn.addEventListener('click', function() {
+            if (!video.srcObject) {
+                alert('La cámara no está disponible');
+                return;
+            }
+
+            // Verificar que hay un nombre
+            const name = document.getElementById('name').value.trim();
+            if (!name) {
+                alert('Por favor ingresa un nombre antes de capturar la foto');
+                document.getElementById('name').focus();
+                return;
+            }
+
+            try {
+                let context = canvas.getContext('2d');
+                
+                // Dibujar la imagen del video en el canvas
+                context.drawImage(video, 0, 0, 350, 280);
+                
+                // Convertir a base64
+                let dataURL = canvas.toDataURL('image/jpeg', 0.8);
+                imageData.value = dataURL;
+                
+                // Actualizar la interfaz
+                video.style.display = 'none';
+                canvas.style.display = 'block';
+                cameraOverlay.style.display = 'none';
+                
+                captureBtn.style.display = 'none';
+                retakeBtn.style.display = 'inline-block';
+                submitBtn.disabled = false;
+                
+                cameraStatus.innerHTML = '<i class="fas fa-check-circle text-success"></i> ¡Foto capturada correctamente!';
+                cameraStatus.className = 'alert alert-success';
+                
+            } catch (error) {
+                console.error('Error al capturar la imagen:', error);
+                alert('Error al capturar la imagen. Inténtalo de nuevo.');
+            }
+        });
+
+        // Tomar otra foto
+        retakeBtn.addEventListener('click', function() {
+            // Restaurar la interfaz
+            video.style.display = 'block';
+            canvas.style.display = 'none';
+            cameraOverlay.style.display = 'block';
+            
+            captureBtn.style.display = 'inline-block';
+            retakeBtn.style.display = 'none';
+            submitBtn.disabled = true;
+            
+            // Limpiar datos de imagen
+            imageData.value = '';
+            
+            cameraStatus.innerHTML = '<i class="fas fa-camera"></i> Posiciona tu rostro y captura otra foto.';
+            cameraStatus.className = 'alert alert-info';
+        });
+
+        // Validación del formulario antes del envío
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const name = document.getElementById('name').value.trim();
+            const imageDataValue = imageData.value;
+            
+            if (!name) {
+                e.preventDefault();
+                alert('Por favor ingresa un nombre');
+                document.getElementById('name').focus();
+                return false;
+            }
+            
+            if (!imageDataValue) {
+                e.preventDefault();
+                alert('Por favor captura una foto antes de enviar');
+                return false;
+            }
+            
+            // Mostrar indicador de carga
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            submitBtn.disabled = true;
+        });
+
+        // Limpiar recursos al salir de la página
+        window.addEventListener('beforeunload', function() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Validación en tiempo real del nombre
+        document.getElementById('name').addEventListener('input', function() {
+            const name = this.value.trim();
+            if (name.length < 2) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+            }
+        });
+    </script>
+</body>
+</html>

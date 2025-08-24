@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-search"></i> Reconocimiento Facial</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <video id="video" width="400" height="300" autoplay></video>
+                    <canvas id="canvas" width="400" height="300" style="display:none;"></canvas>
+                    <br><br>
+                    <button id="recognizeBtn" class="btn btn-success btn-lg">
+                        <i class="fas fa-eye"></i> Reconocer Rostro
+                    </button>
+                    <button id="retakeBtn" class="btn btn-secondary" style="display:none;">
+                        <i class="fas fa-redo"></i> Intentar Otra Vez
+                    </button>
+                    <a href="{% url 'index' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+                
+                <div id="result" class="mt-4" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let video = document.getElementById('video');
+let canvas = document.getElementById('canvas');
+let recognizeBtn = document.getElementById('recognizeBtn');
+let retakeBtn = document.getElementById('retakeBtn');
+let result = document.getElementById('result');
+
+// Acceder a la cámara
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+        video.srcObject = stream;
+    })
+    .catch(err => {
+        alert('Error al acceder a la cámara: ' + err);
+    });
+
+// Reconocer rostro
+recognizeBtn.addEventListener('click', () => {
+    let context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, 400, 300);
+    
+    // Convertir a base64
+    let dataURL = canvas.toDataURL('image/jpeg');
+    
+    // Mostrar loading
+    result.innerHTML = '<div class="alert alert-info"><i class="fas fa-spinner fa-spin"></i> Procesando imagen...</div>';
+    result.style.display = 'block';
+    
+    // Enviar para reconocimiento
+    fetch('{% url "recognize_face" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'image_data=' + encodeURIComponent(dataURL)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            result.innerHTML = `
+                <div class="alert alert-success">
+                    <h4><i class="fas fa-check-circle"></i> ¡Persona Reconocida!</h4>
+                    <p><strong>Nombre:</strong> ${data.name}</p>
+                    <p><strong>Confianza:</strong> ${data.confidence}%</p>
+                </div>
+            `;
+        } else {
+            result.innerHTML = `
+                <div class="alert alert-warning">
+                    <h4><i class="fas fa-exclamation-triangle"></i> No Reconocido</h4>
+                    <p>${data.message}</p>
+                </div>
+            `;
+        }
+        
+        video.style.display = 'none';
+        canvas.style.display = 'block';
+        recognizeBtn.style.display = 'none';
+        retakeBtn.style.display = 'inline-block';
+    })
+    .catch(error => {
+        result.innerHTML = `
+            <div class="alert alert-danger">
+                <h4><i class="fas fa-times-circle"></i> Error</h4>
+                <p>Error al procesar la imagen: ${error}</p>
+            </div>
+        `;
+    });
+});
+
+// Intentar otra vez
+retakeBtn.addEventListener('click', () => {
+    video.style.display = 'block';
+    canvas.style.display = 'none';
+    recognizeBtn.style.display = 'inline-block';
+    retakeBtn.style.display = 'none';
+    result.style.display = 'none';
+});
+</script>
+{% endblock %}

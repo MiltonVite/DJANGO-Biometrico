@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body text-center p-5">
+                <h1 class="display-4 mb-4">
+                    <i class="fas fa-user-check text-primary"></i>
+                    Sistema de Reconocimiento Facial
+                </h1>
+                <p class="lead mb-5">
+                    Registra nuevos rostros y reconoce personas usando tecnología de visión por computadora
+                </p>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-body">
+                                <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                                <h5 class="card-title">Registrar Persona</h5>
+                                <p class="card-text">Captura y registra un nuevo rostro en el sistema</p>
+                                <a href="{% url 'register_person' %}" class="btn btn-primary">
+                                    <i class="fas fa-camera"></i> Registrar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-body">
+                                <i class="fas fa-search fa-3x text-success mb-3"></i>
+                                <h5 class="card-title">Reconocer Rostro</h5>
+                                <p class="card-text">Identifica personas registradas en el sistema</p>
+                                <a href="{% url 'recognize_face' %}" class="btn btn-success">
+                                    <i class="fas fa-eye"></i> Reconocer
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-4 mt-3">
+                    <div class="col-md-6">
+                        <div class="card border-info">
+                            <div class="card-body">
+                                <i class="fas fa-users fa-3x text-info mb-3"></i>
+                                <h5 class="card-title">Lista de Personas</h5>
+                                <p class="card-text">Ver todas las personas registradas</p>
+                                <a href="{% url 'person_list' %}" class="btn btn-info">
+                                    <i class="fas fa-list"></i> Ver Lista
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <i class="fas fa-history fa-3x text-warning mb-3"></i>
+                                <h5 class="card-title">Historial</h5>
+                                <p class="card-text">Revisar el historial de reconocimientos</p>
+                                <a href="{% url 'history' %}" class="btn btn-warning">
+                                    <i class="fas fa-clock"></i> Ver Historial
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
